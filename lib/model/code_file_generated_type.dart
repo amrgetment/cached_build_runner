@@ -1,0 +1,4 @@
+enum CodeFileGeneratedType {
+  import,
+  partFile,
+}
