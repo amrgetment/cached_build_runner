@@ -12,7 +12,7 @@
 ///   - `utils/log.dart` for logging messages to the console.
 ///   - `utils/utils.dart` for utility functions.
 
-library cached_build_runner;
+library;
 
 import 'dart:async';
 import 'dart:io';
@@ -112,7 +112,7 @@ class CachedBuildRunner implements Disposable {
     Logger.v(badFiles.map((e) => e.path).join('\n'));
 
     /// let's handle bad files - by generating the .g.dart / .mocks.dart files for them
-    final success = _buildRunnerWrapper.runBuild(badFiles);
+    final success = await _buildRunnerWrapper.runBuild(badFiles);
 
     if (!success) return;
 

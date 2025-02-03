@@ -7,7 +7,7 @@ import 'package:cached_build_runner/utils/utils.dart';
 class BuildRunnerWrapper {
   const BuildRunnerWrapper();
 
-  bool runBuild(List<CodeFile> files) {
+  Future<bool> runBuild(List<CodeFile> files) async {
     if (files.isEmpty) return true;
     Logger.header(
       'Generating Codes for non-cached files, found ${files.length} files',
@@ -17,22 +17,52 @@ class BuildRunnerWrapper {
 
     final filterList = _getBuildFilterList(files);
 
-    Logger.d('Run: "flutter pub run build_runner build --build-filter $filterList"');
-    final process = Process.runSync(
+    Logger.d(
+      'Run: "flutter pub run build_runner build --build-filter $filterList"',
+    );
+    final process = await Process.start(
       'flutter',
-      ['pub', 'run', 'build_runner', 'build', '--delete-conflicting-outputs', '--build-filter', filterList],
+      [
+        'pub',
+        'run',
+        'build_runner',
+        'build',
+        '--delete-conflicting-outputs',
+        '--build-filter',
+        filterList,
+      ],
       workingDirectory: Utils.projectDirectory,
       runInShell: true,
     );
-    final stdOut = process.stdout?.toString() ?? '';
-    final stdErrr = process.stderr?.toString() ?? '';
-    Logger.v(stdOut.trim(), showPrefix: false);
 
-    if (stdErrr.trim().isNotEmpty) {
-      Logger.e(stdErrr.trim());
-    }
+    /// Listen to the standard output (stdout) of the process.
+    /// - If the log is an elapsed-time `[INFO]` log (e.g., `[INFO] 2m 10s elapsed, 946/1016 actions completed.`),
+    ///   it updates the same line instead of printing a new one.
+    /// - All other logs are printed normally.
+    process.stdout.transform(const SystemEncoding().decoder).listen((data) {
+      // Regex pattern to match only elapsed-time logs
+      final elapsedTimeLogPattern =
+          RegExp(r'\[INFO\] \d+m \d+s elapsed, \d+/\d+ actions completed\.');
 
-    return process.exitCode == 0;
+      if (elapsedTimeLogPattern.hasMatch(data)) {
+        stdout.write(
+          '\r$data',
+        ); // Overwrites the previous line with the latest progress
+      } else {
+        print(data); // Prints normally for other logs
+      }
+    });
+
+    process.stderr.transform(const SystemEncoding().decoder).listen((data) {
+      if (data.trim().isNotEmpty) {
+        Logger.e('Error: $data');
+      }
+    });
+
+    final exitCode = await process.exitCode;
+    Logger.d('Process exited with code: $exitCode');
+
+    return exitCode == 0;
   }
 
   /// Returns a comma-separated string of the file paths from the given list of [CodeFile]s

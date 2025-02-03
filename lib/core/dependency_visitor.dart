@@ -45,6 +45,8 @@ class DependencyVisitor {
     final relativeImportLines = importLines[_relativeImportsConst] ?? const [];
     final absoluteImportLines = importLines[_absoluteImportsConst] ?? const [];
 
+    final currentDirectory = path.dirname(filePath);
+
     final paths = <String>[];
 
     // absolute import lines
@@ -54,7 +56,7 @@ class DependencyVisitor {
 
     // relative import lines
     for (final import in relativeImportLines) {
-      paths.add(path.normalize(path.join(_dirName, import)));
+      paths.add(path.normalize(path.join(currentDirectory, import)));
     }
 
     return paths;
